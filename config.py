@@ -1,0 +1,1 @@
+DATABASE_URL = "postgresql://postgres:sql%40123@localhost:5432/webhookx"
