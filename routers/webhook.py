@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import Webhook, User
+from models import Webhook, User, Delivery, Event
 from routers.auth import get_current_user
+from tasks import send_webhook
 import secrets
 
 router = APIRouter()
@@ -27,7 +28,6 @@ def create_webhook(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ✅ Generate secure random secret
     secret = secrets.token_hex(16)
 
     webhook = Webhook(
@@ -57,9 +57,7 @@ def list_webhooks(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    webhooks = db.query(Webhook).filter(Webhook.user_id == user.id).all()
-
-    return webhooks
+    return db.query(Webhook).filter(Webhook.user_id == user.id).all()
 
 
 @router.delete("/delete/{webhook_id}")
@@ -85,3 +83,53 @@ def delete_webhook(
     db.commit()
 
     return {"message": "Webhook deleted"}
+
+
+# 🔥 DLQ — Get dead deliveries
+@router.get("/dlq")
+def get_dead_deliveries(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.email == current_user).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    dead = db.query(Delivery).filter(Delivery.status == "dead").all()
+
+    return dead
+
+
+# 🔁 Retry dead delivery
+@router.post("/retry/{delivery_id}")
+def retry_dead_delivery(
+    delivery_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.email == current_user).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
+
+    if not delivery or delivery.status != "dead":
+        raise HTTPException(status_code=400, detail="Invalid delivery")
+
+    webhook = db.query(Webhook).filter(Webhook.id == delivery.webhook_id).first()
+    event = db.query(Event).filter(Event.id == delivery.event_id).first()
+
+    if not webhook or not event:
+        raise HTTPException(status_code=404, detail="Data not found")
+
+    # reset
+    delivery.status = "pending"
+    delivery.attempt_count = 0
+    db.commit()
+
+    # async retry
+    send_webhook.delay(webhook.target_url, event.payload, delivery.id)
+
+    return {"message": "Retry triggered"}
