@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import Event, Webhook, Delivery
+from tasks import send_webhook
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ def create_event(event_type: str, payload: dict, db: Session = Depends(get_db)):
         Webhook.event_type == event_type
     ).all()
 
-    # 3. Create delivery jobs
+    # 3. Create delivery jobs + trigger async webhook
     for webhook in webhooks:
         delivery = Delivery(
             webhook_id=webhook.id,
@@ -39,6 +40,9 @@ def create_event(event_type: str, payload: dict, db: Session = Depends(get_db)):
             status="pending"
         )
         db.add(delivery)
+
+        db.flush()  # get delivery.id before commit
+        send_webhook.delay(webhook.target_url, payload, delivery.id)
 
     db.commit()
 
