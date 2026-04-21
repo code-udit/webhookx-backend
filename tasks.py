@@ -6,13 +6,13 @@ from models import Delivery
 from datetime import datetime
 
 
-@celery.task
-def send_webhook(url, payload, delivery_id):
+@celery.task(bind=True, max_retries=5)
+def send_webhook(self, url, payload, delivery_id):
     db = SessionLocal()
 
-    start = time.time()
-
     try:
+        start = time.time()
+
         response = requests.post(url, json=payload, timeout=5)
 
         latency = int((time.time() - start) * 1000)
@@ -24,19 +24,21 @@ def send_webhook(url, payload, delivery_id):
             delivery.delivered_at = datetime.utcnow()
             db.commit()
 
-        print(f"✅ Sent: {url}")
-        print(f"Status: {response.status_code}")
-        print(f"Latency: {latency} ms")
+        print("✅ Sent:", url)
+        print("Status:", response.status_code)
 
     except Exception as e:
         delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
 
         if delivery:
-            delivery.status = "failed"
+            delivery.attempt_count += 1
+            delivery.status = "retrying"
             db.commit()
 
-        print(f"❌ Failed: {url}")
-        print(f"Error: {str(e)}")
+        print("❌ Failed:", url)
+
+        # retry after delay
+        raise self.retry(exc=e, countdown=10)
 
     finally:
         db.close()
