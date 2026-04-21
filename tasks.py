@@ -28,16 +28,18 @@ def send_webhook(self, url, payload, delivery_id):
         print("Status:", response.status_code)
 
     except Exception as e:
-        delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
-
-        if delivery:
-            delivery.attempt_count += 1
-            delivery.status = "retrying"
-            db.commit()
-
-        print("❌ Failed:", url)
-
-        # retry after delay
+        if self.request.retries >= self.max_retries:
+            delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
+        
+            if delivery:
+                delivery.status = "dead"
+                db.commit()
+        
+            print("☠️ Moved to DLQ:", url)
+        
+            db.close()
+            return
+        
         raise self.retry(exc=e, countdown=10)
 
     finally:
