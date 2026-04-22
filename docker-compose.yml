@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+
+  api:
+    build: .
+    container_name: webhook_api
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15
+    container_name: webhook_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: webhookx
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    container_name: webhook_redis
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: .
+    container_name: webhook_worker
+    command: celery -A celery_app.celery worker --loglevel=info
+    depends_on:
+      - redis
+      - db
+
+

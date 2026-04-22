@@ -133,3 +133,14 @@ def retry_dead_delivery(
     send_webhook.delay(webhook.target_url, event.payload, delivery.id)
 
     return {"message": "Retry triggered"}
+
+
+
+@router.get("/test-task")
+def test_task():
+    send_webhook.delay(
+        url="https://webhook.site/test",
+        payload={"msg": "hello"},
+        delivery_id=1
+    )
+    return {"message": "triggered"}

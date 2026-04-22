@@ -1,0 +1,65 @@
+Python
+
+pycache/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+
+Virtual Environment
+
+venv/
+.env/
+.env.*
+
+VS Code
+
+.vscode/
+
+OS files
+
+.DS_Store
+Thumbs.db
+
+Logs
+
+*.log
+
+Database
+
+*.db
+*.sqlite3
+
+Docker
+
+*.pid
+*.sock
+
+Env variables (IMPORTANT)
+
+.env
+
+Python packaging
+
+build/
+dist/
+*.egg-info/
+
+Test / coverage
+
+.coverage
+htmlcov/
+
+Migrations (optional - keep if using Alembic)
+
+alembic/versions/
+
+Cache
+
+.cache/
+
+Temporary files
+
+*.tmp
+*.bak
