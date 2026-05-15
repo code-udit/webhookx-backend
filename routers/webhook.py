@@ -5,6 +5,7 @@ from models import Webhook, User, Delivery, Event
 from routers.auth import get_current_user
 from tasks import send_webhook
 import secrets
+from sqlalchemy import text
 
 router = APIRouter()
 
@@ -60,6 +61,7 @@ def list_webhooks(
     return db.query(Webhook).filter(Webhook.user_id == user.id).all()
 
 
+
 @router.delete("/delete/{webhook_id}")
 def delete_webhook(
     webhook_id: int,
@@ -79,6 +81,20 @@ def delete_webhook(
     if not webhook:
         raise HTTPException(status_code=404, detail="Webhook not found")
 
+    deliveries = db.query(Delivery).filter(
+        Delivery.webhook_id == webhook.id
+    ).all()
+
+    for delivery in deliveries:
+        db.execute(
+            text("DELETE FROM delivery_logs WHERE delivery_id = :id"),
+            {"id": delivery.id}
+        )
+
+    db.query(Delivery).filter(
+        Delivery.webhook_id == webhook.id
+    ).delete()
+
     db.delete(webhook)
     db.commit()
 
@@ -96,7 +112,10 @@ def get_dead_deliveries(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    dead = db.query(Delivery).filter(Delivery.status == "dead").all()
+    dead = db.query(Delivery).join(Webhook).filter(
+        Delivery.status == "dead",
+        Webhook.user_id == user.id
+    ).all()
 
     return dead
 
