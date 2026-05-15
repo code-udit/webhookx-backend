@@ -3,8 +3,14 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import Event, Webhook, Delivery
 from tasks import send_webhook
+from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class EventRequest(BaseModel):
+    event_type: str
+    payload: dict
 
 
 def get_db():
@@ -16,12 +22,12 @@ def get_db():
 
 
 @router.post("/create")
-def create_event(event_type: str, payload: dict, db: Session = Depends(get_db)):
+def create_event(data: EventRequest, db: Session = Depends(get_db)):
 
     # 1. Save event
     event = Event(
-        event_type=event_type,
-        payload=payload
+        event_type=data.event_type,
+        payload=data.payload
     )
     db.add(event)
     db.commit()
@@ -29,7 +35,7 @@ def create_event(event_type: str, payload: dict, db: Session = Depends(get_db)):
 
     # 2. Find matching webhooks
     webhooks = db.query(Webhook).filter(
-        Webhook.event_type == event_type
+        Webhook.event_type == data.event_type
     ).all()
 
     # 3. Create delivery jobs + trigger async webhook
@@ -41,8 +47,8 @@ def create_event(event_type: str, payload: dict, db: Session = Depends(get_db)):
         )
         db.add(delivery)
 
-        db.flush()  # get delivery.id before commit
-        send_webhook.delay(webhook.target_url, payload, delivery.id)
+        db.flush()
+        send_webhook.delay(webhook.target_url, data.payload, delivery.id)
 
     db.commit()
 
