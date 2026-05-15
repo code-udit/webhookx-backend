@@ -112,12 +112,21 @@ def get_dead_deliveries(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    dead = db.query(Delivery).join(Webhook).filter(
+    dead = db.query(Delivery, Webhook).join(Webhook).filter(
         Delivery.status == "dead",
         Webhook.user_id == user.id
     ).all()
-
-    return dead
+    
+    result = []
+    
+    for d, w in dead:
+        result.append({
+            "id": d.id,
+            "status": d.status,
+            "webhook_url": w.target_url
+        })
+    
+    return result
 
 
 # 🔁 Retry dead delivery
