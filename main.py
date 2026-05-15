@@ -5,6 +5,8 @@ from models import User
 from routers import webhook
 from routers import event
 from fastapi.middleware.cors import CORSMiddleware
+from routers import deliveries
+
 
 app = FastAPI()
 
@@ -23,6 +25,9 @@ app.include_router(auth_router, prefix="/auth")
 app.include_router(webhook.router, prefix="/webhook")
 
 app.include_router(event.router, prefix="/event")
+
+app.include_router(deliveries.router, prefix="/deliveries")
+
 
 @app.get("/")
 def root():
