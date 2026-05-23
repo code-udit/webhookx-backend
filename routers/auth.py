@@ -62,7 +62,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     if existing_user:
         return {"error": "Email already registered"}
 
-    hashed_password = pwd_context.hash(data.password)
+    safe_password = data.password[:72]
+    hashed_password = pwd_context.hash(safe_password)
 
     user = User(
         email=data.email,
