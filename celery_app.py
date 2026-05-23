@@ -1,15 +1,17 @@
 import os
-# from dotenv import load_dotenv
 from celery import Celery
 
-# load_dotenv()
-
 REDIS_URL = os.getenv("REDIS_URL")
+
+if not REDIS_URL:
+    raise ValueError("REDIS_URL is not set")
 
 celery = Celery(
     "worker",
     broker=REDIS_URL,
     backend=REDIS_URL
 )
+
+celery.conf.broker_connection_retry_on_startup = True
 
 import tasks
