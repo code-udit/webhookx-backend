@@ -23,9 +23,7 @@ def send_webhook(self, url, payload, delivery_id):
             delivery.attempt_count += 1
             delivery.status = "success"
             delivery.delivered_at = datetime.utcnow()
-            db.commit()
 
-            # 📊 Log success
             log = DeliveryLog(
                 delivery_id=delivery_id,
                 attempt_number=delivery.attempt_count,
@@ -33,10 +31,11 @@ def send_webhook(self, url, payload, delivery_id):
                 response_body=response.text[:200],
                 latency_ms=latency
             )
+
             db.add(log)
             db.commit()
 
-        print("✅ Sent:", url)
+        print("Sent:", url)
         print("Status:", response.status_code)
 
     except Exception as e:
@@ -44,9 +43,7 @@ def send_webhook(self, url, payload, delivery_id):
 
         if delivery:
             delivery.attempt_count += 1
-            db.commit()
 
-            # 📊 Log failure
             log = DeliveryLog(
                 delivery_id=delivery_id,
                 attempt_number=delivery.attempt_count,
@@ -54,15 +51,16 @@ def send_webhook(self, url, payload, delivery_id):
                 response_body=str(e),
                 latency_ms=0
             )
+
             db.add(log)
+
+            if self.request.retries >= self.max_retries:
+                delivery.status = "dead"
+
             db.commit()
 
         if self.request.retries >= self.max_retries:
-            if delivery:
-                delivery.status = "dead"
-                db.commit()
-
-            print("☠️ Moved to DLQ:", url)
+            print("Moved to DLQ:", url)
             db.close()
             return
 
