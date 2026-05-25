@@ -51,27 +51,20 @@ def get_delivery_logs(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    logs = db.query(DeliveryLog).join(Delivery).join(Webhook).filter(
-        Webhook.user_id == user.id
-    ).all()
+    logs = db.query(DeliveryLog, Delivery, Webhook)\
+        .join(Delivery, DeliveryLog.delivery_id == Delivery.id)\
+        .join(Webhook, Delivery.webhook_id == Webhook.id)\
+        .filter(Webhook.user_id == user.id)\
+        .all()
 
     result = []
 
-    for log in logs:
-        delivery = log.delivery
-        webhook = delivery.webhook
-    
+    for log, delivery, webhook in logs:
         result.append({
-            "id": delivery.id,
+            "id": log.id,
             "status": delivery.status,
             "attempt_count": delivery.attempt_count,
-            "webhook_url": webhook.target_url,
-    
-            "delivery_id": log.delivery_id,
-            "attempt_number": log.attempt_number,
-            "response_code": log.response_code,
-            "response_body": log.response_body,
-            "latency_ms": log.latency_ms
+            "webhook_url": webhook.target_url
         })
 
     return result
