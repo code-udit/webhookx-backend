@@ -58,8 +58,15 @@ def get_delivery_logs(
     result = []
 
     for log in logs:
+        delivery = log.delivery
+        webhook = delivery.webhook
+    
         result.append({
-            "id": log.id,
+            "id": delivery.id,
+            "status": delivery.status,
+            "attempt_count": delivery.attempt_count,
+            "webhook_url": webhook.target_url,
+    
             "delivery_id": log.delivery_id,
             "attempt_number": log.attempt_number,
             "response_code": log.response_code,
