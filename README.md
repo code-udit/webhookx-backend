@@ -1,338 +1,344 @@
-WebhookX Backend — Scalable Webhook Delivery Engine
+# WebhookX Backend
 
-📌 Overview
-
-WebhookX is a production-style webhook delivery system built with FastAPI, Celery, Redis, and PostgreSQL.
-
-It allows users to:
-
-- Register webhook endpoints
-- Send events
-- Deliver payloads asynchronously
-- Retry failed deliveries
-- Track logs and performance metrics
+A scalable webhook delivery engine built with FastAPI, PostgreSQL, Redis, and Celery that supports asynchronous webhook delivery, retry mechanisms, dead letter queues, logging, and real-time monitoring.
 
 ---
 
-🏗️ Architecture
+## 🚀 Overview
 
-Client → FastAPI → PostgreSQL → Redis Queue → Celery Worker → External Webhook
+WebhookX Backend is the core engine responsible for:
 
----
+- Managing webhook registrations
+- Receiving events
+- Processing asynchronous deliveries
+- Retrying failed deliveries
+- Logging delivery attempts
+- Handling dead letter queues
+- Providing analytics APIs
 
-⚙️ Tech Stack
-
-- Backend Framework: FastAPI
-- Database: PostgreSQL
-- ORM: SQLAlchemy
-- Queue System: Redis
-- Worker: Celery
-- Auth: JWT + Password Hashing
-- Containerization: Docker + Docker Compose
+The system is designed for reliability, scalability, and production-grade webhook processing.
 
 ---
 
-✨ Features
+## 🛠 Tech Stack
 
-🔐 Authentication
-
-- User registration & login
-- JWT-based authentication
-- Protected routes
-
-🔗 Webhook Management
-
-- Create webhook endpoints
-- List user-specific webhooks
-- Delete webhooks
-- Secret key generation
-
-⚡ Event Processing
-
-- Accept events via API
-- Store events in DB
-- Match relevant webhooks
-- Create delivery jobs
-
-🚚 Async Delivery Engine
-
-- Background processing using Celery
-- HTTP POST delivery to webhook URLs
-- Latency measurement
-- Response tracking
-
-🔄 Retry Mechanism
-
-- Exponential backoff strategy
-- Automatic retry on failure
-- Max retry limit handling
-
-☠️ Dead Letter Queue (DLQ)
-
-- Failed deliveries marked as “dead”
-- Stored for later inspection
-- Manual retry support
-
-📊 Logging & Metrics
-
-- Delivery logs stored per attempt
-- Tracks:
-  - Response status
-  - Latency
-  - Attempt count
-- Ready for analytics dashboards
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Redis
+- Celery
+- Docker
+- JWT Authentication
+- Python 3.11
 
 ---
 
-🧩 Database Schema
+## 🧱 System Architecture
 
-Main tables:
-
-- "users"
-- "webhooks"
-- "events"
-- "deliveries"
-- "delivery_logs"
-
----
-
-🐳 Docker Setup
-
-Run entire system
-
-docker compose up --build
-
-Services
-
-- API → http://localhost:8000
-- Swagger Docs → http://localhost:8000/docs
-- PostgreSQL → port 5432
-- Redis → port 6379
-- Celery Worker → background
+```text
+Client → FastAPI → PostgreSQL
+                ↓
+             Redis Queue
+                ↓
+           Celery Workers
+                ↓
+        External Webhook URLs
+````
 
 ---
 
-🧪 Testing the System (Stage-wise Validation)
+## 📁 Project Structure
 
-The backend system was tested incrementally across all development stages to ensure correctness, stability, and production readiness.
-
----
-
-🧩 Stage B1 — API Startup
-
-✔ Verified FastAPI server runs
-✔ Accessible at:
-
-http://localhost:8000/docs
-
----
-
-🐘 Stage B2 — Database Connection
-
-✔ PostgreSQL container started via Docker
-✔ SQLAlchemy successfully connected
-✔ Retry mechanism handled delayed DB startup
-
-Expected log:
-
-Database connected
+```bash
+webhookx-backend/
+│
+├── routers/
+│   ├── auth.py
+│   ├── webhook.py
+│   ├── event.py
+│   └── deliveries.py
+│
+├── celery_app.py
+├── config.py
+├── database.py
+├── models.py
+├── tasks.py
+├── main.py
+├── requirements.txt
+└── docker-compose.yml
+```
 
 ---
 
-🧱 Stage B3 — Models & Tables
+## ✨ Features
 
-✔ Tables created:
+### 🔐 Authentication
 
-- users
-- webhooks
-- events
-- deliveries
-- delivery_logs
+* User Registration
+* User Login
+* JWT Authentication
+* Password Hashing
+* Protected APIs
 
-✔ Verified via DB inspection
+### 🔗 Webhook Management
 
----
+* Create Webhooks
+* Delete Webhooks
+* List User Webhooks
+* Secret Key Generation
 
-🔐 Stage B4 — Authentication
+### ⚡ Event Processing
 
-✔ Register API tested
-✔ Login API returns JWT
-✔ Protected routes validated using token
+* Event Ingestion API
+* Event Storage
+* Async Delivery Queue
+* Multi-Webhook Dispatching
 
----
+### 🚚 Delivery Engine
 
-🔗 Stage B5 — Webhook Management
+* HTTP POST Delivery
+* Background Processing
+* Response Tracking
+* Latency Measurement
 
-✔ Create webhook → success
-✔ List user webhooks → correct filtering
-✔ Delete webhook → removed from DB
+### 🔄 Retry Logic
 
----
+Exponential Backoff Retry Strategy:
 
-⚡ Stage B6 — Event Ingestion
+| Attempt | Delay             |
+| ------- | ----------------- |
+| 1       | 30 Seconds        |
+| 2       | 2 Minutes         |
+| 3       | 10 Minutes        |
+| 4       | 30 Minutes        |
+| 5       | Dead Letter Queue |
 
-✔ Event API triggered
-✔ Event stored in DB
-✔ Delivery records created
+### ☠️ Dead Letter Queue
 
----
+* Store Permanently Failed Deliveries
+* Retry Failed Jobs Manually
+* Failure Tracking
 
-🔁 Stage B7 — Queue + Worker
+### 📊 Logging & Metrics
 
-✔ Redis running
-✔ Celery worker connected
-
-Verified using logs:
-
-Connected to redis://redis:6379/0
-celery ready
-
----
-
-🚚 Stage B8 — Delivery Engine
-
-✔ Worker sends POST request to webhook URL
-✔ Captured:
-
-- Status code
-- Response
-- Execution time
-
-Example log:
-
-Sent: https://webhook.site/...
-Status: 200
+* Delivery Logs
+* Success Rate
+* Failed Deliveries
+* Average Latency
+* Delivery Analytics
 
 ---
 
-🔄 Stage B9 — Retry System
+## 🗄 Database Schema
 
-✔ Failed webhook tested using invalid URL
-✔ Retry attempts triggered with delay
-✔ Status updated correctly
+### users
 
----
+| Column        | Type     |
+| ------------- | -------- |
+| id            | Integer  |
+| email         | String   |
+| password_hash | String   |
+| created_at    | DateTime |
 
-☠️ Stage B10 — Dead Letter Queue
+### webhooks
 
-✔ Failed deliveries moved to DLQ
-✔ Fetch via:
+| Column     | Type     |
+| ---------- | -------- |
+| id         | Integer  |
+| user_id    | Integer  |
+| target_url | String   |
+| event_type | String   |
+| secret_key | String   |
+| is_active  | Boolean  |
+| created_at | DateTime |
 
-GET /webhook/dlq
+### events
 
-✔ Manual retry tested:
+| Column     | Type     |
+| ---------- | -------- |
+| id         | Integer  |
+| event_type | String   |
+| payload    | JSON     |
+| created_at | DateTime |
 
-POST /webhook/retry/{id}
+### deliveries
 
----
+| Column        | Type     |
+| ------------- | -------- |
+| id            | Integer  |
+| webhook_id    | Integer  |
+| event_id      | Integer  |
+| status        | String   |
+| attempt_count | Integer  |
+| next_retry_at | DateTime |
+| delivered_at  | DateTime |
+| created_at    | DateTime |
 
-📊 Stage B11 — Logging & Metrics
+### delivery_logs
 
-✔ delivery_logs table populated
-✔ Each attempt stored with:
-
-- status
-- response
-- timestamp
-
----
-
-🐳 Stage B12 — Dockerization
-
-✔ Entire system runs using:
-
-docker compose up --build
-
-✔ Verified:
-
-- API container
-- DB container
-- Redis container
-- Worker container
-
-✔ Inter-service communication working
-
----
-
-📦 Stage B13 — Final Integration Test
-
-End-to-end flow tested:
-
-1. Create webhook
-2. Trigger event
-3. Worker processes task
-4. External service receives request
-
-Worker logs confirm:
-
-Task tasks.send_webhook received
-Status: 200
-Task succeeded
+| Column         | Type     |
+| -------------- | -------- |
+| id             | Integer  |
+| delivery_id    | Integer  |
+| attempt_number | Integer  |
+| response_code  | Integer  |
+| response_body  | Text     |
+| latency_ms     | Integer  |
+| attempted_at   | DateTime |
 
 ---
 
-✅ Final Outcome
+## ⚙️ Environment Variables
 
-✔ Full system tested stage-by-stage
-✔ Async processing verified
-✔ Retry + DLQ validated
-✔ Docker-based deployment working
-✔ Production-ready webhook engine
+Create a `.env` file.
 
----
-
-🔁 Retry Flow
-
-If webhook fails:
-
-- Retries automatically with delay
-- Updates delivery status
-- Moves to DLQ after max retries
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/webhookx
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REDIS_URL=redis://localhost:6379/0
+```
 
 ---
 
-📦 API Endpoints (Key)
+## 📦 Installation
 
-Auth
+### 1. Clone Repository
 
-- POST /auth/register
-- POST /auth/login
+```bash
+git clone https://github.com/yourusername/webhookx-backend.git
+cd webhookx-backend
+```
 
-Webhooks
+### 2. Create Virtual Environment
 
-- POST /webhook/create
-- GET /webhook/list
-- DELETE /webhook/delete/{id}
+```bash
+python -m venv venv
+```
 
-Events
+### 3. Activate Environment
 
-- POST /event/create
+#### Windows
 
-DLQ
+```bash
+venv\Scripts\activate
+```
 
-- GET /webhook/dlq
-- POST /webhook/retry/{delivery_id}
+#### Mac/Linux
+
+```bash
+source venv/bin/activate
+```
+
+### 4. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-📈 System Flow
+## ▶️ Run Application
 
-1. User creates webhook
-2. Event is triggered
-3. Matching webhooks are fetched
-4. Delivery jobs created
-5. Celery worker processes jobs
-6. Webhook called
-7. Logs stored
-8. Retry if failed
+### Start FastAPI Server
+
+```bash
+uvicorn main:app --reload
+```
+
+Application runs on:
+
+```bash
+http://localhost:8000
+```
 
 ---
 
-🧠 Key Learnings
+## ⚡ Run Celery Worker
 
-- Async task processing with Celery
-- Distributed system design basics
-- Retry & fault tolerance patterns
-- Docker-based service orchestration
-- Real-world backend architecture
+```bash
+celery -A tasks worker --loglevel=info
+```
+
+---
+
+## 🐳 Docker Setup
+
+### Run Full System
+
+```bash
+docker-compose up --build
+```
+
+Services:
+
+* FastAPI
+* PostgreSQL
+* Redis
+* Celery Worker
+
+---
+
+## 📡 API Endpoints
+
+### Authentication
+
+| Method | Endpoint  |
+| ------ | --------- |
+| POST   | /register |
+| POST   | /login    |
+
+### Webhooks
+
+| Method | Endpoint       |
+| ------ | -------------- |
+| POST   | /webhooks      |
+| GET    | /webhooks      |
+| DELETE | /webhooks/{id} |
+
+### Events
+
+| Method | Endpoint |
+| ------ | -------- |
+| POST   | /events  |
+
+### Deliveries
+
+| Method | Endpoint               |
+| ------ | ---------------------- |
+| GET    | /deliveries            |
+| GET    | /deliveries/logs       |
+| GET    | /deliveries/dlq        |
+| POST   | /deliveries/retry/{id} |
+
+---
+
+## 🔄 Delivery Workflow
+
+1. User registers webhook
+2. Event is received
+3. Delivery job created
+4. Celery worker processes job
+5. Webhook POST request sent
+6. Response logged
+7. Retry scheduled if failed
+8. Final failure moved to DLQ
+
+---
+
+## 📈 Future Improvements
+
+* Rate Limiting
+* WebSocket Monitoring
+* API Key Authentication
+* Event Replay
+* Batch Deliveries
+* Kubernetes Deployment
+* Prometheus Metrics
+* Grafana Dashboard
+
+
+
+
 
